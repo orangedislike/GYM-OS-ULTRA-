@@ -2,37 +2,30 @@ name: Build GYM OS ULTRA APK
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-     GYM_OS_ULTRA_FINAL_BUILD_Android_Studio_Project.zip
-      - '.github/workflows/build-apk.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract latest project
+      - name: Find project
         run: |
-          rm -rf build_project
-          mkdir build_project
-          unzip -q GYM_OS_ULTRA_FINAL_BUILD_Android_Studio_Project.zip -d build_project
-
-      - name: Find Android project
-        run: |
+          unzip -q "$(find . -maxdepth 1 -name '*.zip' | head -1)" -d build_project
           PROJECT_DIR=$(find build_project -type f -name settings.gradle | head -1 | xargs dirname)
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Using project: $PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
-      - name: Verify launcher icon
+      - name: HARD CODE APP NAME
         run: |
-          echo "Checking AndroidManifest:"
-          grep 'android:icon' "$PROJECT_DIR/app/src/main/AndroidManifest.xml" || true
-          echo "Checking launcher resources:"
-          find "$PROJECT_DIR/app/src/main/res" -type f | grep -E 'mipmap|icon_foreground' || true
+          MANIFEST="$PROJECT_DIR/app/src/main/AndroidManifest.xml"
+
+          sed -i 's/android:label="@string\/app_name"/android:label="GYM OS ULTRA"/g' "$MANIFEST"
+          sed -i 's/android:label="[^"]*"/android:label="GYM OS ULTRA"/g' "$MANIFEST"
+
+          echo "APP NAME SET TO: GYM OS ULTRA"
+          grep 'android:label' "$MANIFEST"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -57,8 +50,13 @@ jobs:
         run: |
           gradle assembleDebug --no-daemon
 
+      - name: Rename APK
+        run: |
+          cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" \
+             "$GITHUB_WORKSPACE/GYM-OS-ULTRA.apk"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GYM-OS-ULTRA-APK
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          path: GYM-OS-ULTRA.apk
