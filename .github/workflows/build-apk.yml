@@ -13,7 +13,7 @@ jobs:
 
       - name: Find project
         run: |
-          unzip -q "$(find . -maxdepth 1 -name '*.zip' | head -1)" -d build_project
+          unzip -q GYM_OS_ULTRA_FINAL_NAME_HARD_CODED_Android_Studio_Project.zip -d build_project
           PROJECT_DIR=$(find build_project -type f -name settings.gradle | head -1 | xargs dirname)
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
