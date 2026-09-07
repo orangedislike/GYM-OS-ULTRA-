@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'GYM_OS_ULTRA_MISSION_Android_Studio_Project.zip'
+     GYM_OS_ULTRA_FINAL_BUILD_Android_Studio_Project.zip
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
         run: |
           rm -rf build_project
           mkdir build_project
-          unzip -q GYM_OS_ULTRA_MISSION_Android_Studio_Project.zip -d build_project
+          unzip -q GYM_OS_ULTRA_FINAL_BUILD_Android_Studio_Project.zip -d build_project
 
       - name: Find Android project
         run: |
