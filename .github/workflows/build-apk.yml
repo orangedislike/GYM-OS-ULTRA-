@@ -3,8 +3,9 @@ name: Build GYM OS ULTRA APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    paths:
+      - "*.zip"
+      - ".github/workflows/build-apk.yml"
 
 jobs:
   build:
@@ -14,230 +15,71 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Find Android Studio ZIP
-        shell: bash
-        run: |
-          set -e
-
-          ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*.zip" -print -quit)
-
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: No Android Studio ZIP found!"
-            exit 1
-          fi
-
-          echo "Using project ZIP: $ZIP_FILE"
-          echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
-
       - name: Extract Android Project
-        shell: bash
         run: |
           set -e
+          rm -rf project
+          mkdir project
+          unzip -q GYM_OS_ULTRA_CLEAN_ANDROID_PROJECT.zip -d project
 
-          rm -rf build_project
-          mkdir -p build_project
-
-          unzip -q "$ZIP_FILE" -d build_project
-
-          PROJECT_DIR=$(find build_project -type f \
-            \( -name "settings.gradle" -o -name "settings.gradle.kts" \) \
-            -print -quit | xargs dirname)
+          PROJECT_DIR=$(find project -name settings.gradle -o -name settings.gradle.kts | head -1 | xargs dirname)
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Android Studio project not found!"
+            echo "Android project not found"
             exit 1
           fi
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project: $PROJECT_DIR"
 
-          echo "Android project:"
-          echo "$PROJECT_DIR"
-
-      - name: Fix App Name
-        shell: bash
+      - name: Check Project
         run: |
-          set -e
-
-          MANIFEST="$PROJECT_DIR/app/src/main/AndroidManifest.xml"
-
-          if [ ! -f "$MANIFEST" ]; then
-            echo "ERROR: AndroidManifest.xml not found!"
-            exit 1
-          fi
-
-          sed -i 's/android:label="@string\/app_name"/android:label="GYM OS ULTRA"/g' "$MANIFEST"
-
-          STRINGS="$PROJECT_DIR/app/src/main/res/values/strings.xml"
-
-          if [ -f "$STRINGS" ]; then
-            sed -i 's#<string name="app_name">.*</string>#<string name="app_name">GYM OS ULTRA</string>#g' "$STRINGS"
-          fi
-
-          echo "App name fixed."
-
-      - name: Fix MainActivity
-        shell: bash
-        run: |
-          set -e
-
-          MAIN="$PROJECT_DIR/app/src/main/java/com/gymos/ultra/MainActivity.java"
-
-          if [ ! -f "$MAIN" ]; then
-            MAIN=$(find "$PROJECT_DIR/app/src/main/java" \
-              -type f -name "MainActivity.java" -print -quit)
-          fi
-
-          if [ -z "$MAIN" ] || [ ! -f "$MAIN" ]; then
-            echo "ERROR: MainActivity.java not found!"
-            exit 1
-          fi
-
-          PACKAGE=$(grep -m1 '^package ' "$MAIN" | sed 's/package //;s/;//')
-
-          if [ -z "$PACKAGE" ]; then
-            echo "ERROR: Java package not found!"
-            exit 1
-          fi
-
-          ASSET_DIR="$PROJECT_DIR/app/src/main/assets"
-
-          if [ ! -d "$ASSET_DIR" ]; then
-            echo "ERROR: Android assets folder not found!"
-            exit 1
-          fi
-
-          HTML=$(find "$ASSET_DIR" -maxdepth 1 -type f -name "*.html" -print -quit)
-
-          if [ -z "$HTML" ]; then
-            echo "ERROR: HTML file not found in assets!"
-            exit 1
-          fi
-
-          HTML_NAME=$(basename "$HTML")
-
-          echo "Package: $PACKAGE"
-          echo "HTML: $HTML_NAME"
-
-          cat > "$MAIN" <<EOF
-package $PACKAGE;
-
-import android.annotation.SuppressLint;
-import android.os.Bundle;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-
-import androidx.appcompat.app.AppCompatActivity;
-
-public class MainActivity extends AppCompatActivity {
-
-    private WebView webView;
-
-    @SuppressLint("SetJavaScriptEnabled")
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        webView = new WebView(this);
-        setContentView(webView);
-
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-
-        webView.setWebViewClient(new WebViewClient());
-
-        webView.loadUrl("file:///android_asset/$HTML_NAME");
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-}
-EOF
-
-          echo "MainActivity fixed successfully."
-
-      - name: Verify Project
-        shell: bash
-        run: |
-          set -e
-
           echo "===== MANIFEST ====="
-          grep -E 'android:label|android:icon|android:roundIcon' \
-            "$PROJECT_DIR/app/src/main/AndroidManifest.xml" || true
+          grep -n "android:icon" "$PROJECT_DIR/app/src/main/AndroidManifest.xml" || true
 
-          echo "===== HTML FILES ====="
-          find "$PROJECT_DIR/app/src/main/assets" \
-            -maxdepth 1 -type f -print
+          echo "===== ICONS ====="
+          find "$PROJECT_DIR/app/src/main/res" -type f | grep -E "mipmap|icon" || true
 
-          echo "===== ICON FILES ====="
-          find "$PROJECT_DIR/app/src/main/res" \
-            -type f \
-            \( -path "*/mipmap/*" -o -path "*/mipmap-*/*" -o -name "*icon*" \) \
-            -print || true
+          echo "===== HTML ====="
+          find "$PROJECT_DIR/app/src/main/assets" -type f || true
 
-          echo "===== MAIN ACTIVITY ====="
-          grep -n "loadUrl\|package " \
-            "$PROJECT_DIR/app/src/main/java/com/gymos/ultra/MainActivity.java" || true
-
-      - name: Set up Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
 
-      - name: Set up Android SDK
+      - name: Setup Android
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK
-        shell: bash
+      - name: Install SDK
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build APK
         working-directory: ${{ env.PROJECT_DIR }}
-        shell: bash
         run: |
-          set -e
-          gradle assembleDebug --no-daemon
+          gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Locate APK
-        shell: bash
+      - name: Verify APK
         run: |
-          set -e
+          APK="$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk"
 
-          APK=$(find "$PROJECT_DIR/app/build/outputs/apk" \
-            -type f -name "*.apk" -print -quit)
-
-          if [ -z "$APK" ]; then
-            echo "ERROR: APK was not generated!"
+          if [ ! -f "$APK" ]; then
+            echo "APK NOT CREATED"
             exit 1
           fi
 
-          echo "APK FOUND:"
-          echo "$APK"
-
-          cp "$APK" "$GITHUB_WORKSPACE/GYM-OS-ULTRA.apk"
-
-          echo "Final APK:"
-          ls -lh "$GITHUB_WORKSPACE/GYM-OS-ULTRA.apk"
+          echo "APK CREATED:"
+          ls -lh "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GYM-OS-ULTRA-APK
-          path: GYM-OS-ULTRA.apk
-          if-no-files-found: error
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
