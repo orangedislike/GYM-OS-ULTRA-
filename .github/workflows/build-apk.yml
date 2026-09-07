@@ -1,0 +1,118 @@
+name: Build GYM OS ULTRA APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract project
+        run: |
+          set -e
+
+          ZIP="GYM_OS_ULTRA_FINAL_NAME_HARD_CODED_Android_Studio_Project.zip"
+
+          if [ ! -f "$ZIP" ]; then
+            echo "ERROR: $ZIP not found"
+            exit 1
+          fi
+
+          rm -rf build_project
+          mkdir build_project
+          unzip -q "$ZIP" -d build_project
+
+          PROJECT_DIR=$(find build_project -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -print -quit | xargs -r dirname)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Android project not found"
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project: $PROJECT_DIR"
+
+      - name: Set app name to GYM OS ULTRA
+        run: |
+          set -e
+
+          MANIFEST="$PROJECT_DIR/app/src/main/AndroidManifest.xml"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "ERROR: AndroidManifest.xml not found"
+            exit 1
+          fi
+
+          python3 - "$MANIFEST" <<'PY'
+          import sys
+          import re
+
+          path = sys.argv[1]
+
+          with open(path, "r", encoding="utf-8") as f:
+              text = f.read()
+
+          text = re.sub(
+              r'android:label="[^"]*"',
+              'android:label="GYM OS ULTRA"',
+              text,
+              count=1
+          )
+
+          with open(path, "w", encoding="utf-8") as f:
+              f.write(text)
+          PY
+
+          echo "Final app label:"
+          grep -o 'android:label="[^"]*"' "$MANIFEST" || true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          gradle assembleDebug --no-daemon
+
+      - name: Find and rename APK
+        run: |
+          set -e
+
+          APK=$(find "$PROJECT_DIR/app/build/outputs" -type f -name "*.apk" -print -quit)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK not found"
+            find "$PROJECT_DIR/app/build/outputs" -type f -print || true
+            exit 1
+          fi
+
+          echo "APK found: $APK"
+
+          cp "$APK" "$GITHUB_WORKSPACE/GYM-OS-ULTRA.apk"
+
+          ls -lh "$GITHUB_WORKSPACE/GYM-OS-ULTRA.apk"
+
+      - name: Upload final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GYM-OS-ULTRA-APK
+          path: GYM-OS-ULTRA.apk
