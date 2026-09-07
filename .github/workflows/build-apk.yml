@@ -12,36 +12,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract Android Project
+      - name: Prepare Project
+        shell: bash
         run: |
           set -e
-          rm -rf project
-          mkdir project
-          unzip -q GYM_OS_ULTRA_CLEAN_ANDROID_PROJECT.zip -d project
 
-          PROJECT_DIR=$(find project -name settings.gradle -o -name settings.gradle.kts | head -1 | xargs dirname)
+          rm -rf build_project
+          mkdir -p build_project
+
+          ZIP_FILE="GYM_OS_ULTRA_CLEAN_ANDROID_PROJECT.zip"
+
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "ERROR: $ZIP_FILE not found"
+            exit 1
+          fi
+
+          echo "Using ZIP: $ZIP_FILE"
+
+          unzip -q "$ZIP_FILE" -d build_project
+
+          PROJECT_DIR=$(find build_project -type f \
+            \( -name "settings.gradle" -o -name "settings.gradle.kts" \) \
+            -print -quit | xargs -r dirname)
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "Android project not found"
+            echo "ERROR: Android project not found"
             exit 1
           fi
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Project: $PROJECT_DIR"
+          echo "Project found at: $PROJECT_DIR"
 
-      - name: Check Project
+      - name: Verify Project
+        shell: bash
         run: |
-          echo "===== MANIFEST ====="
-          grep -n "android:icon" "$PROJECT_DIR/app/src/main/AndroidManifest.xml" || true
+          set -e
 
-          echo "===== ICONS ====="
-          find "$PROJECT_DIR/app/src/main/res" -type f | grep -E "mipmap|icon" || true
+          echo "===== MANIFEST ====="
+          cat "$PROJECT_DIR/app/src/main/AndroidManifest.xml"
+
+          echo "===== ICON FILES ====="
+          find "$PROJECT_DIR/app/src/main/res" -type f \
+            \( -path "*mipmap*" -o -name "*icon*" \) -print || true
+
+          echo "===== MAIN ACTIVITY ====="
+          find "$PROJECT_DIR/app/src/main/java" -type f -name "MainActivity.java" -print
 
           echo "===== HTML ====="
-          find "$PROJECT_DIR/app/src/main/assets" -type f || true
+          find "$PROJECT_DIR/app/src/main/assets" -type f -print
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -54,32 +76,51 @@ jobs:
         with:
           gradle-version: "8.7"
 
-      - name: Setup Android
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install SDK
+      - name: Install Android SDK
+        shell: bash
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build APK
         working-directory: ${{ env.PROJECT_DIR }}
+        shell: bash
         run: |
-          gradle assembleDebug --no-daemon --stacktrace
+          set -e
 
-      - name: Verify APK
+          echo "===== BUILDING APK ====="
+
+          gradle :app:assembleDebug \
+            --no-daemon \
+            --stacktrace
+
+      - name: Find APK
+        shell: bash
         run: |
-          APK="$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk"
+          set -e
 
-          if [ ! -f "$APK" ]; then
-            echo "APK NOT CREATED"
+          echo "===== SEARCHING APK ====="
+
+          APK=$(find "$PROJECT_DIR/app/build/outputs/apk" \
+            -type f -name "*.apk" -print -quit)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK was not found"
+            echo "===== BUILD OUTPUT ====="
+            find "$PROJECT_DIR/app/build" -type f -print || true
             exit 1
           fi
 
-          echo "APK CREATED:"
-          ls -lh "$APK"
+          echo "APK FOUND:"
+          echo "$APK"
+
+          cp "$APK" "$GITHUB_WORKSPACE/GYM-OS-ULTRA.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GYM-OS-ULTRA-APK
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          path: GYM-OS-ULTRA.apk
+          if-no-files-found: error
