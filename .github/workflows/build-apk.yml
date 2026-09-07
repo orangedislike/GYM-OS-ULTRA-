@@ -14,580 +14,230 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create Android Project
+      - name: Find Android Studio ZIP
+        shell: bash
         run: |
-          mkdir -p app/src/main/java/com/gymos/ultra
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/drawable
-
-          cat > settings.gradle <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-
-          rootProject.name = "GYM_OS_ULTRA"
-          include(":app")
-          EOF
-
-          cat > build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.6.1' apply false
-          }
-          EOF
-
-          cat > gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          EOF
-
-          cat > app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application'
-          }
-
-          android {
-              namespace 'com.gymos.ultra'
-              compileSdk 35
-
-              defaultConfig {
-                  applicationId 'com.gymos.ultra'
-                  minSdk 24
-                  targetSdk 35
-                  versionCode 1
-                  versionName '1.0'
-              }
-          }
-          EOF
-
-          cat > app/src/main/res/values/strings.xml <<'EOF'
-          <resources>
-              <string name="app_name">GYM OS ULTRA</string>
-          </resources>
-          EOF
-
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-              <uses-permission android:name="android.permission.INTERNET"/>
-
-              <application
-                  android:allowBackup="true"
-                  android:label="GYM OS ULTRA"
-                  android:theme="@style/AppTheme">
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:screenOrientation="portrait"
-                      android:exported="true">
-
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-
-                  </activity>
-              </application>
-
-          </manifest>
-          EOF
-
-          cat > app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-              <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
-                  <item name="android:fontFamily">sans</item>
-                  <item name="android:windowLightStatusBar">false</item>
-                  <item name="android:statusBarColor">#080808</item>
-                  <item name="android:navigationBarColor">#080808</item>
-                  <item name="android:colorAccent">#00E676</item>
-              </style>
-          </resources>
-          EOF
-
-          cat > app/src/main/java/com/gymos/ultra/MainActivity.java <<'EOF'
-          package com.gymos.ultra;
-
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-
-          public class MainActivity extends Activity {
-
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-
-                  WebView webView = new WebView(this);
-                  setContentView(webView);
-
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setDatabaseEnabled(true);
-                  settings.setAllowFileAccess(true);
-
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.loadDataWithBaseURL(
-                          null,
-                          HTML_APP,
-                          "text/html",
-                          "UTF-8",
-                          null
-                  );
-              }
-
-              private static final String HTML_APP = """
-          <!DOCTYPE html>
-          <html>
-          <head>
-          <meta name="viewport" content="width=device-width,initial-scale=1">
-          <title>GYM OS ULTRA</title>
-
-          <style>
-          *{box-sizing:border-box}
-          body{
-              margin:0;
-              background:#080808;
-              color:#fff;
-              font-family:Arial,sans-serif;
-          }
-          .app{
-              max-width:700px;
-              margin:auto;
-              padding:18px;
-          }
-          .header{
-              padding:22px;
-              border-radius:22px;
-              background:linear-gradient(135deg,#151515,#242424);
-              border:1px solid #333;
-              margin-bottom:16px;
-          }
-          h1{margin:0;font-size:28px}
-          .sub{color:#999;margin-top:6px}
-          .card{
-              background:#121212;
-              border:1px solid #292929;
-              border-radius:18px;
-              padding:16px;
-              margin-bottom:14px;
-          }
-          .grid{
-              display:grid;
-              grid-template-columns:1fr 1fr;
-              gap:10px;
-          }
-          .stat{
-              background:#181818;
-              padding:14px;
-              border-radius:14px;
-              text-align:center;
-          }
-          .num{
-              font-size:25px;
-              font-weight:bold;
-          }
-          .green{color:#00e676}
-          input,select{
-              width:100%;
-              padding:13px;
-              margin:6px 0;
-              border-radius:10px;
-              border:1px solid #333;
-              background:#1b1b1b;
-              color:white;
-          }
-          button{
-              width:100%;
-              padding:13px;
-              margin-top:8px;
-              border:0;
-              border-radius:11px;
-              background:#00e676;
-              color:#000;
-              font-weight:bold;
-          }
-          button.dark{
-              background:#252525;
-              color:#fff;
-          }
-          .mission{
-              padding:13px;
-              border-radius:12px;
-              background:#191919;
-              margin:8px 0;
-          }
-          .bar{
-              height:9px;
-              background:#292929;
-              border-radius:10px;
-              overflow:hidden;
-              margin-top:8px;
-          }
-          .fill{
-              height:100%;
-              background:#00e676;
-              width:0%;
-          }
-          .log{
-              border-bottom:1px solid #292929;
-              padding:10px 0;
-          }
-          small{color:#888}
-          </style>
-          </head>
-
-          <body>
-          <div class="app">
-
-          <div class="header">
-              <h1>GYM OS ULTRA</h1>
-              <div class="sub">TRACK PROGRESS • BE BETTER</div>
-          </div>
-
-          <div class="card">
-              <h2>📊 Dashboard</h2>
-              <div class="grid">
-                  <div class="stat">
-                      <div class="num green" id="sessions">0</div>
-                      <small>Sessions</small>
-                  </div>
-                  <div class="stat">
-                      <div class="num green" id="volume">0</div>
-                      <small>Total Volume</small>
-                  </div>
-                  <div class="stat">
-                      <div class="num green" id="best">0</div>
-                      <small>Best KG</small>
-                  </div>
-                  <div class="stat">
-                      <div class="num green" id="xp">0</div>
-                      <small>XP</small>
-                  </div>
-              </div>
-          </div>
-
-          <div class="card">
-              <h2>🏆 Level</h2>
-              <div id="level">Level 1</div>
-              <div class="bar">
-                  <div class="fill" id="levelbar"></div>
-              </div>
-          </div>
-
-          <div class="card">
-              <h2>💪 Workout Log</h2>
-
-              <input id="exercise" list="exerciseList"
-                     placeholder="Exercise">
-
-              <datalist id="exerciseList">
-                  <option>Bench Press</option>
-                  <option>Incline Bench Press</option>
-                  <option>Chest Fly</option>
-                  <option>Deadlift</option>
-                  <option>Lat Pulldown</option>
-                  <option>Barbell Row</option>
-                  <option>Seated Row</option>
-                  <option>Shoulder Press</option>
-                  <option>Lateral Raise</option>
-                  <option>Barbell Curl</option>
-                  <option>Hammer Curl</option>
-                  <option>Triceps Pushdown</option>
-                  <option>Overhead Triceps Extension</option>
-                  <option>Squat</option>
-                  <option>Leg Press</option>
-                  <option>Leg Curl</option>
-                  <option>Calf Raise</option>
-                  <option>Plank</option>
-              </datalist>
-
-              <select id="muscle">
-                  <option>Chest</option>
-                  <option>Back</option>
-                  <option>Shoulders</option>
-                  <option>Biceps</option>
-                  <option>Triceps</option>
-                  <option>Legs</option>
-                  <option>Core</option>
-                  <option>Full Body</option>
-              </select>
-
-              <input id="weight" type="number" placeholder="Weight (KG)">
-              <input id="reps" type="number" placeholder="Reps">
-              <input id="sets" type="number" placeholder="Sets">
-
-              <button onclick="addWorkout()">SAVE WORKOUT</button>
-          </div>
-
-          <div class="card">
-              <h2>🎯 Missions</h2>
-
-              <div class="mission">
-                  <b>Mission 1 — Log a Workout</b>
-                  <div id="m1">0 / 1</div>
-                  <div class="bar">
-                      <div class="fill" id="m1bar"></div>
-                  </div>
-              </div>
-
-              <div class="mission">
-                  <b>Mission 2 — Complete 3 Sets</b>
-                  <div id="m2">0 / 3</div>
-                  <div class="bar">
-                      <div class="fill" id="m2bar"></div>
-                  </div>
-              </div>
-
-              <div class="mission">
-                  <b>Mission 3 — Earn 100 XP</b>
-                  <div id="m3">0 / 100</div>
-                  <div class="bar">
-                      <div class="fill" id="m3bar"></div>
-                  </div>
-              </div>
-
-              <button class="dark" onclick="newMissions()">
-                  🔄 NEW MISSIONS
-              </button>
-          </div>
-
-          <div class="card">
-              <h2>📈 Goals</h2>
-
-              <input id="goalExercise"
-                     placeholder="Goal Exercise">
-
-              <input id="goalWeight"
-                     type="number"
-                     placeholder="Target KG">
-
-              <button onclick="saveGoal()">SAVE GOAL</button>
-
-              <div id="goals"></div>
-          </div>
-
-          <div class="card">
-              <h2>📜 History</h2>
-              <div id="history"></div>
-          </div>
-
-          </div>
-
-          <script>
-          let data=JSON.parse(localStorage.getItem("gymUltraData")||"null")||{
-              workouts:[],
-              goals:[],
-              xp:0,
-              missions:{m1:0,m2:0,m3:0}
-          };
-
-          function save(){
-              localStorage.setItem("gymUltraData",JSON.stringify(data));
-              render();
-          }
-
-          function addWorkout(){
-              let exercise=document.getElementById("exercise").value.trim();
-              let muscle=document.getElementById("muscle").value;
-              let weight=Number(document.getElementById("weight").value);
-              let reps=Number(document.getElementById("reps").value);
-              let sets=Number(document.getElementById("sets").value);
-
-              if(!exercise||weight<=0||reps<=0||sets<=0){
-                  alert("Please fill all workout details.");
-                  return;
-              }
-
-              data.workouts.push({
-                  exercise,
-                  muscle,
-                  weight,
-                  reps,
-                  sets,
-                  date:new Date().toLocaleDateString()
-              });
-
-              data.xp+=25;
-              data.missions.m1=1;
-              data.missions.m2=Math.min(3,sets);
-              data.missions.m3=Math.min(100,data.xp);
-
-              document.getElementById("exercise").value="";
-              document.getElementById("weight").value="";
-              document.getElementById("reps").value="";
-              document.getElementById("sets").value="";
-
-              save();
-          }
-
-          function saveGoal(){
-              let exercise=document.getElementById("goalExercise").value.trim();
-              let target=Number(document.getElementById("goalWeight").value);
-
-              if(!exercise||target<=0){
-                  alert("Enter exercise and target KG.");
-                  return;
-              }
-
-              data.goals.push({exercise,target});
-              document.getElementById("goalExercise").value="";
-              document.getElementById("goalWeight").value="";
-              save();
-          }
-
-          function newMissions(){
-              data.missions={m1:0,m2:0,m3:0};
-              save();
-          }
-
-          function render(){
-              let workouts=data.workouts;
-
-              document.getElementById("sessions").textContent=workouts.length;
-
-              let volume=workouts.reduce(
-                  (a,w)=>a+(w.weight*w.reps*w.sets),0
-              );
-
-              document.getElementById("volume").textContent=
-                  Math.round(volume);
-
-              let best=workouts.reduce(
-                  (a,w)=>Math.max(a,w.weight),0
-              );
-
-              document.getElementById("best").textContent=best;
-              document.getElementById("xp").textContent=data.xp;
-
-              let level=Math.floor(data.xp/100)+1;
-              let progress=data.xp%100;
-
-              document.getElementById("level").textContent=
-                  "Level "+level;
-
-              document.getElementById("levelbar").style.width=
-                  progress+"%";
-
-              document.getElementById("m1").textContent=
-                  data.missions.m1+" / 1";
-
-              document.getElementById("m2").textContent=
-                  data.missions.m2+" / 3";
-
-              document.getElementById("m3").textContent=
-                  data.missions.m3+" / 100";
-
-              document.getElementById("m1bar").style.width=
-                  (data.missions.m1*100)+"%";
-
-              document.getElementById("m2bar").style.width=
-                  ((data.missions.m2/3)*100)+"%";
-
-              document.getElementById("m3bar").style.width=
-                  data.missions.m3+"%";
-
-              let history=document.getElementById("history");
-
-              if(!workouts.length){
-                  history.innerHTML="<small>No workouts yet.</small>";
-              }else{
-                  history.innerHTML=workouts.slice().reverse().map(
-                      (w,i)=>`
-                      <div class="log">
-                          <b>${w.exercise}</b><br>
-                          ${w.weight} KG × ${w.reps} reps × ${w.sets} sets
-                          <br><small>${w.muscle} • ${w.date}</small>
-                      </div>`
-                  ).join("");
-              }
-
-              let goals=document.getElementById("goals");
-
-              if(!data.goals.length){
-                  goals.innerHTML="<small>No goals yet.</small>";
-              }else{
-                  goals.innerHTML=data.goals.map(g=>{
-                      let current=0;
-
-                      workouts.forEach(w=>{
-                          if(w.exercise.toLowerCase()===
-                             g.exercise.toLowerCase()){
-                              current=Math.max(current,w.weight);
-                          }
-                      });
-
-                      let pct=Math.min(
-                          100,
-                          Math.round((current/g.target)*100)
-                      );
-
-                      return `
-                      <div class="mission">
-                          <b>${g.exercise}</b>
-                          <br>
-                          ${current} / ${g.target} KG
-                          <div class="bar">
-                              <div class="fill"
-                                   style="width:${pct}%"></div>
-                          </div>
-                          <small>${pct}% complete</small>
-                      </div>`;
-                  }).join("");
-              }
-          }
-
-          render();
-          </script>
-
-          </body>
-          </html>
-          """;
-          }
-          EOF
+          set -e
+
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*.zip" -print -quit)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: No Android Studio ZIP found!"
+            exit 1
+          fi
+
+          echo "Using project ZIP: $ZIP_FILE"
+          echo "ZIP_FILE=$ZIP_FILE" >> "$GITHUB_ENV"
+
+      - name: Extract Android Project
+        shell: bash
+        run: |
+          set -e
+
+          rm -rf build_project
+          mkdir -p build_project
+
+          unzip -q "$ZIP_FILE" -d build_project
+
+          PROJECT_DIR=$(find build_project -type f \
+            \( -name "settings.gradle" -o -name "settings.gradle.kts" \) \
+            -print -quit | xargs dirname)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Android Studio project not found!"
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+          echo "Android project:"
+          echo "$PROJECT_DIR"
+
+      - name: Fix App Name
+        shell: bash
+        run: |
+          set -e
+
+          MANIFEST="$PROJECT_DIR/app/src/main/AndroidManifest.xml"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "ERROR: AndroidManifest.xml not found!"
+            exit 1
+          fi
+
+          sed -i 's/android:label="@string\/app_name"/android:label="GYM OS ULTRA"/g' "$MANIFEST"
+
+          STRINGS="$PROJECT_DIR/app/src/main/res/values/strings.xml"
+
+          if [ -f "$STRINGS" ]; then
+            sed -i 's#<string name="app_name">.*</string>#<string name="app_name">GYM OS ULTRA</string>#g' "$STRINGS"
+          fi
+
+          echo "App name fixed."
+
+      - name: Fix MainActivity
+        shell: bash
+        run: |
+          set -e
+
+          MAIN="$PROJECT_DIR/app/src/main/java/com/gymos/ultra/MainActivity.java"
+
+          if [ ! -f "$MAIN" ]; then
+            MAIN=$(find "$PROJECT_DIR/app/src/main/java" \
+              -type f -name "MainActivity.java" -print -quit)
+          fi
+
+          if [ -z "$MAIN" ] || [ ! -f "$MAIN" ]; then
+            echo "ERROR: MainActivity.java not found!"
+            exit 1
+          fi
+
+          PACKAGE=$(grep -m1 '^package ' "$MAIN" | sed 's/package //;s/;//')
+
+          if [ -z "$PACKAGE" ]; then
+            echo "ERROR: Java package not found!"
+            exit 1
+          fi
+
+          ASSET_DIR="$PROJECT_DIR/app/src/main/assets"
+
+          if [ ! -d "$ASSET_DIR" ]; then
+            echo "ERROR: Android assets folder not found!"
+            exit 1
+          fi
+
+          HTML=$(find "$ASSET_DIR" -maxdepth 1 -type f -name "*.html" -print -quit)
+
+          if [ -z "$HTML" ]; then
+            echo "ERROR: HTML file not found in assets!"
+            exit 1
+          fi
+
+          HTML_NAME=$(basename "$HTML")
+
+          echo "Package: $PACKAGE"
+          echo "HTML: $HTML_NAME"
+
+          cat > "$MAIN" <<EOF
+package $PACKAGE;
+
+import android.annotation.SuppressLint;
+import android.os.Bundle;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+
+    private WebView webView;
+
+    @SuppressLint("SetJavaScriptEnabled")
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        webView = new WebView(this);
+        setContentView(webView);
+
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+
+        webView.setWebViewClient(new WebViewClient());
+
+        webView.loadUrl("file:///android_asset/$HTML_NAME");
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+}
+EOF
+
+          echo "MainActivity fixed successfully."
+
+      - name: Verify Project
+        shell: bash
+        run: |
+          set -e
+
+          echo "===== MANIFEST ====="
+          grep -E 'android:label|android:icon|android:roundIcon' \
+            "$PROJECT_DIR/app/src/main/AndroidManifest.xml" || true
+
+          echo "===== HTML FILES ====="
+          find "$PROJECT_DIR/app/src/main/assets" \
+            -maxdepth 1 -type f -print
+
+          echo "===== ICON FILES ====="
+          find "$PROJECT_DIR/app/src/main/res" \
+            -type f \
+            \( -path "*/mipmap/*" -o -path "*/mipmap-*/*" -o -name "*icon*" \) \
+            -print || true
+
+          echo "===== MAIN ACTIVITY ====="
+          grep -n "loadUrl\|package " \
+            "$PROJECT_DIR/app/src/main/java/com/gymos/ultra/MainActivity.java" || true
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
+          gradle-version: "8.7"
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK
+        shell: bash
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        shell: bash
         run: |
+          set -e
           gradle assembleDebug --no-daemon
 
-      - name: Rename APK
+      - name: Locate APK
+        shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk \
-             GYM-OS-ULTRA.apk
+          set -e
+
+          APK=$(find "$PROJECT_DIR/app/build/outputs/apk" \
+            -type f -name "*.apk" -print -quit)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK was not generated!"
+            exit 1
+          fi
+
+          echo "APK FOUND:"
+          echo "$APK"
+
+          cp "$APK" "$GITHUB_WORKSPACE/GYM-OS-ULTRA.apk"
+
+          echo "Final APK:"
+          ls -lh "$GITHUB_WORKSPACE/GYM-OS-ULTRA.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GYM-OS-ULTRA-APK
           path: GYM-OS-ULTRA.apk
+          if-no-files-found: error
